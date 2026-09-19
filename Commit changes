@@ -1,0 +1,64 @@
+import os
+import logging
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
+import yt_dlp
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+TOKEN = "8901156580:AAFyq_amdGGmJWSDE-Wmq665ukk1LBU6tbY"
+
+BOT_SIGNATURE = "تحميل مباشر ✅\n🤖 @my_clean_do88wnloader_bot"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    welcome_text = (
+        "هلا بيك يا غالي في بوت التحميل الشامل! 🚀\n\n"
+        "أقدر أساعدك بتحميل الفيديوهات والملفات بسهولة وبدون إعلانات مزعجة من أشهر التطبيقات:\n"
+        "• YouTube (يوتيوب)\n"
+        "• TikTok (تيك توك)\n"
+        "• Instagram (إنستغرام)\n"
+        "• Snapchat (سناب شات)\n"
+        "• Facebook وغيره هواي!\n\n"
+        "فقط دز الرابط هنا وخلي الباقي عليّ 👇"
+    )
+    await update.message.reply_text(welcome_text)
+
+async def download_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url = update.message.text
+    if not url.startswith("http"):
+        await update.message.reply_text("عيني دز رابط صالح ومضبوط حتى أقدر أحمله.")
+        return
+
+    await update.message.reply_text("جاري جلب الملف... ثواني ويوصلك ⏳")
+
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': 'downloaded_media.%(ext)s',
+        'noplaylist': True,
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+
+        with open(filename, 'rb') as media_file:
+            if any(platform in url for platform in ['tiktok', 'instagram', 'snapchat', 'fb', 'facebook', 'vm.tiktok']):
+                await update.message.reply_video(media_file, caption=BOT_SIGNATURE)
+            else:
+                await update.message.reply_audio(media_file, caption=BOT_SIGNATURE)
+            
+        os.remove(filename)
+    except Exception as e:
+        await update.message.reply_text(f"صار خطأ بالتحميل يا وردة: {e}")
+
+if __name__ == '__main__':
+    application = ApplicationBuilder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), download_media))
+    
+    application.run_polling()
